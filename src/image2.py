@@ -10,7 +10,6 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import Float64MultiArray, Float64
 from cv_bridge import CvBridge, CvBridgeError
 
-
 class image_converter:
 
   # Defines publisher and subscriber
@@ -23,25 +22,68 @@ class image_converter:
     self.image_sub2 = rospy.Subscriber("/camera2/robot/image_raw",Image,self.callback2)
     # initialize the bridge between openCV and ROS
     self.bridge = CvBridge()
+    self.rate = rospy.Rate(30)
 
+    # Publisher for centre coords - [BlueX, BlueZ, GreenX, GreenZ, RedX, RedZ]
+    self.xz_plane_pub = rospy.Publisher("xz_centre_coords", Float64MultiArray, queue_size=10)
 
   # Recieve data, process it, and publish
   def callback2(self,data):
     # Recieve the image
     try:
-      self.cv_image2 = self.bridge.imgmsg_to_cv2(data, "bgr8")
+      self.cv_image1 = self.bridge.imgmsg_to_cv2(data, "bgr8")
     except CvBridgeError as e:
       print(e)
-    # Uncomment if you want to save the image
-    #cv2.imwrite('image_copy.png', cv_image)
-    im2=cv2.imshow('window2', self.cv_image2)
+
+    # Find centres of each joint
+    red_x, red_z = self.detect_colour(self.cv_image1, (0,0,100), (0,0,255)) # Detect red
+    blue_x, blue_z = self.detect_colour(self.cv_image1, (100,0,0), (255,0,0)) # Detect blue
+    green_x, green_z = self.detect_colour(self.cv_image1, (0,100,0), (0,255,0)) # Detect green
+
+    # Camera 1: get X and Z
+    centre_msg = Float64MultiArray()
+    centre_msg.data = np.zeros(6)
+
+    if blue_x is not None and blue_z is not None:
+      centre_msg.data[0] = blue_x
+      centre_msg.data[1] = blue_z
+    else:
+      #TODO: Extrapolate here
+      pass
+
+    if green_x is not None and green_z is not None:
+      centre_msg.data[2] = green_x
+      centre_msg.data[3] = green_z
+    else:
+      #TODO: Extrapolate here
+      pass
+
+    if red_x is not None and red_z is not None:
+      centre_msg.data[4] = red_x
+      centre_msg.data[5] = red_z
+    else:
+      #TODO: Extrapolate here
+      pass
+
+    self.xz_plane_pub.publish(centre_msg)
+
+    im1=cv2.imshow('window1', self.cv_image1)
     cv2.waitKey(1)
 
-    # Publish the results
-    try: 
-      self.image_pub2.publish(self.bridge.cv2_to_imgmsg(self.cv_image2, "bgr8"))
-    except CvBridgeError as e:
-      print(e)
+  def detect_colour(self, image, lower, upper):
+    mask = cv2.inRange(image, lower, upper)
+
+    kernel = np.ones((5,5), np.uint8)
+    mask = cv2.dilate(mask, kernel, iterations=3)
+
+    M = cv2.moments(mask)
+    try:
+      cx = int(M['m10'] / M['m00'])
+      cy = int(M['m01'] / M['m00'])
+    except ZeroDivisionError:
+      return (None, None)
+
+    return (cx, cy)
 
 # call the class
 def main(args):
@@ -55,5 +97,3 @@ def main(args):
 # run the code if the node is called
 if __name__ == '__main__':
     main(sys.argv)
-
-
