@@ -47,10 +47,9 @@ class image_converter:
     red_centre = self.detect_colour(self.cv_image1, (0,0,100), (0,0,255)) # Detect red
     blue_centre = self.detect_colour(self.cv_image1, (100,0,0), (255,0,0)) # Detect blue
     green_centre = self.detect_colour(self.cv_image1, (0,100,0), (0,255,0)) # Detect green
-    print(red_centre)
-    print(blue_centre)
-    print(green_centre)
-    print("---")
+    rospy.loginfo("Red centre: " + str(red_centre))
+    rospy.loginfo("Blue centre: " + str(blue_centre))
+    rospy.loginfo("Green centre: " + str(green_centre))
 
     im1=cv2.imshow('window1', self.cv_image1)
     cv2.waitKey(1)
