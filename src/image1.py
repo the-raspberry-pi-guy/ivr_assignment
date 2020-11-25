@@ -44,6 +44,14 @@ class image_converter:
     # Uncomment if you want to save the image
     #cv2.imwrite('image_copy.png', cv_image)
 
+    red_centre = self.detect_colour(self.cv_image1, (0,0,100), (0,0,255)) # Detect red
+    blue_centre = self.detect_colour(self.cv_image1, (100,0,0), (255,0,0)) # Detect blue
+    green_centre = self.detect_colour(self.cv_image1, (0,100,0), (0,255,0)) # Detect green
+    print(red_centre)
+    print(blue_centre)
+    print(green_centre)
+    print("---")
+
     im1=cv2.imshow('window1', self.cv_image1)
     cv2.waitKey(1)
     # Publish the results
@@ -51,6 +59,21 @@ class image_converter:
       self.image_pub1.publish(self.bridge.cv2_to_imgmsg(self.cv_image1, "bgr8"))
     except CvBridgeError as e:
       print(e)
+
+  def detect_colour(self, image, lower, upper):
+    mask = cv2.inRange(image, lower, upper)
+
+    kernel = np.ones((5,5), np.uint8)
+    mask = cv2.dilate(mask, kernel, iterations=3)
+
+    M = cv2.moments(mask)
+    try:
+      cx = int(M['m10'] / M['m00'])
+      cy = int(M['m01'] / M['m00'])
+    except ZeroDivisionError:
+      return None
+
+    return np.array([cx, cy])
 
   # Publish data
   def move(self):
