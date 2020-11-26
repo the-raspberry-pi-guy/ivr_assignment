@@ -67,7 +67,7 @@ class image_converter:
 
     self.xz_plane_pub.publish(centre_msg)
 
-    im1=cv2.imshow('window1', self.cv_image1)
+    im1=cv2.imshow('Camera 2 - XZ Plane', self.cv_image1)
     cv2.waitKey(1)
 
   def detect_colour(self, image, lower, upper):
