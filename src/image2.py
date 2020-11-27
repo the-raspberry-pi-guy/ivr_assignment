@@ -25,7 +25,16 @@ class image_converter:
     self.rate = rospy.Rate(30)
 
     # Publisher for centre coords - [BlueX, BlueZ, GreenX, GreenZ, RedX, RedZ]
-    self.xz_plane_pub = rospy.Publisher("xz_centre_coords", Float64MultiArray, queue_size=10)
+    self.xz_plane_pub = rospy.Publisher("xz_centre_coords", Float64MultiArray, queue_size=1)
+
+    self.obst_pub = rospy.Publisher("/camera2/obst_pub", Float64, queue_size=1)
+
+    self.last_blue_x = 0
+    self.last_blue_z = 0
+    self.last_green_x = 0
+    self.last_green_z = 0
+    self.last_red_x = 0
+    self.last_red_z = 0 
 
   # Recieve data, process it, and publish
   def callback2(self,data):
@@ -44,26 +53,40 @@ class image_converter:
     centre_msg = Float64MultiArray()
     centre_msg.data = np.zeros(6)
 
+    obst_msg = Float64()
+
     if blue_x is not None and blue_z is not None:
+      self.last_blue_x = blue_x
+      self.last_blue_z = blue_z 
       centre_msg.data[0] = blue_x
       centre_msg.data[1] = blue_z
     else:
-      #TODO: Extrapolate here
-      pass
+      obst_msg.data = 200
+      self.obst_pub.publish(obst_msg)
+      centre_msg.data[0] = self.last_blue_x
+      centre_msg.data[1] = self.last_blue_z
 
     if green_x is not None and green_z is not None:
+      self.last_green_x = green_x
+      self.last_green_z = green_z
       centre_msg.data[2] = green_x
       centre_msg.data[3] = green_z
     else:
-      #TODO: Extrapolate here
-      pass
+      obst_msg.data = 300
+      self.obst_pub.publish(obst_msg)
+      centre_msg.data[2] = self.last_green_x
+      centre_msg.data[3] = self.last_green_z
 
     if red_x is not None and red_z is not None:
+      self.last_red_x = red_x
+      self.last_red_z = red_z
       centre_msg.data[4] = red_x
       centre_msg.data[5] = red_z
     else:
-      #TODO: Extrapolate here
-      pass
+      obst_msg.data = 400
+      self.obst_pub.publish(obst_msg)
+      centre_msg.data[4] = self.last_red_x
+      centre_msg.data[5] = self.last_red_z
 
     self.xz_plane_pub.publish(centre_msg)
 

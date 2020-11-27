@@ -9,7 +9,6 @@ from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from std_msgs.msg import Float64MultiArray, Float64
 from cv_bridge import CvBridge, CvBridgeError
-import math
 
 class image_converter:
 
@@ -26,7 +25,16 @@ class image_converter:
     self.rate = rospy.Rate(30)
 
     # Publisher for centre coords - [BlueY, BlueZ, GreenY, GreenZ, RedY, RedZ]
-    self.yz_plane_pub = rospy.Publisher("yz_centre_coords", Float64MultiArray, queue_size=10)
+    self.yz_plane_pub = rospy.Publisher("yz_centre_coords", Float64MultiArray, queue_size=1)
+
+    self.obst_pub = rospy.Publisher("/camera1/obst_pub", Float64, queue_size=1)
+
+    self.last_blue_y = 0
+    self.last_blue_z = 0
+    self.last_green_y = 0
+    self.last_green_z = 0
+    self.last_red_y = 0
+    self.last_red_z = 0 
 
   # Recieve data from camera 1, process it, and publish
   def callback1(self,data):
@@ -45,26 +53,40 @@ class image_converter:
     centre_msg = Float64MultiArray()
     centre_msg.data = np.zeros(6)
 
+    obst_msg = Float64()
+
     if blue_y is not None and blue_z is not None:
+      self.last_blue_y = blue_y
+      self.last_blue_z = blue_z 
       centre_msg.data[0] = blue_y
       centre_msg.data[1] = blue_z
     else:
-      #TODO: Extrapolate here
-      pass
+      obst_msg.data = 200
+      self.obst_pub.publish(obst_msg)
+      centre_msg.data[0] = self.last_blue_y
+      centre_msg.data[1] = self.last_blue_z
 
     if green_y is not None and green_z is not None:
+      self.last_green_y = green_y
+      self.last_green_z = green_z
       centre_msg.data[2] = green_y
       centre_msg.data[3] = green_z
     else:
-      #TODO: Extrapolate here
-      pass
+      obst_msg.data = 300
+      self.obst_pub.publish(obst_msg)
+      centre_msg.data[2] = self.last_green_y
+      centre_msg.data[3] = self.last_green_z
 
     if red_y is not None and red_z is not None:
+      self.last_red_y = red_y
+      self.last_red_z = red_z
       centre_msg.data[4] = red_y
       centre_msg.data[5] = red_z
     else:
-      #TODO: Extrapolate here
-      pass
+      obst_msg.data = 400
+      self.obst_pub.publish(obst_msg)
+      centre_msg.data[4] = self.last_red_y
+      centre_msg.data[5] = self.last_red_z
 
     self.yz_plane_pub.publish(centre_msg)
 
@@ -73,7 +95,7 @@ class image_converter:
 
   def detect_colour(self, image, lower, upper):
     mask = cv2.inRange(image, lower, upper)
-
+    
     kernel = np.ones((5,5), np.uint8)
     mask = cv2.dilate(mask, kernel, iterations=3)
 
