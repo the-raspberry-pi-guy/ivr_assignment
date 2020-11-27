@@ -57,16 +57,24 @@ class joint_angles:
 
         vec_YB = np.array([0, 0, -1])
         vec_BG = blue_coords - green_coords
+        vec_GR = green_coords - red_coords
 
         vec_bg_msg = Float64MultiArray()
         vec_bg_msg.data = vec_BG
         self.vec_bg_pub.publish(vec_bg_msg)
 
         joint2_angle = np.arctan2(vec_BG[1], vec_BG[2])
+
         # Select value for special case where y and z are both 0 (atan2 technically undefined in this case)
         # Numpy returns 0, we arbitrarily choose pi/2 as opposed to -pi/2
         # if joint2_angle == 0:
         #     joint2_angle = math.pi / 2
+
+        # Rotate vec_BG around the x axis
+        vec_BG_rot = self.rotate_around_x_axis(vec_BG, joint2_angle)
+        joint3_angle = -np.arctan2(vec_BG_rot[0], vec_BG_rot[2])
+
+        joint4_angle = np.arctan2(vec_GR[1], vec_GR[2]) - joint2_angle
 
         print("Blue: " + str(blue_coords))
         print("Green: " + str(green_coords))
@@ -74,10 +82,15 @@ class joint_angles:
         print("Vec YB: " + str(vec_YB)) 
         print("Vec BG: " + str(vec_BG))
         print("Angle 2: " + str(joint2_angle))
-        #print("Angle 3: " + str(joint3_angle))
+        print("Angle 3: " + str(joint3_angle))
+        print("Angle 4: " + str(joint4_angle))
         print("---")        
 
-        return np.array([joint2_angle])
+        return np.array([0, joint2_angle, joint3_angle, joint4_angle])
+
+    def rotate_around_x_axis(self, vec, theta):
+        rotation_matrix = np.array([[1, 0, 0], [0, np.cos(theta), -np.sin(theta)], [0, np.sin(theta), np.cos(theta)]])
+        return np.matmul(rotation_matrix, vec)
 
     # Publish data
     def move(self):
@@ -99,7 +112,7 @@ class joint_angles:
 
             self.robot_joint2_pub.publish(joint2)
             self.robot_joint3_pub.publish(joint3)
-            # self.robot_joint4_pub.publish(joint4)
+            self.robot_joint4_pub.publish(joint4)
 
             self.rate.sleep()
 
