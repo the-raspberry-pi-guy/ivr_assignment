@@ -11,24 +11,17 @@ from std_msgs.msg import Float64MultiArray, Float64
 from cv_bridge import CvBridge, CvBridgeError
 
 class image_converter:
-
-  # Defines publisher and subscriber
   def __init__(self):
-    # initialize the node named image_processing
-    rospy.init_node('image_processing', anonymous=True)
-    # initialize a publisher to send images from camera2 to a topic named image_topic2
-    self.image_pub2 = rospy.Publisher("image_topic2",Image, queue_size = 1)
-    # initialize a subscriber to recieve messages rom a topic named /robot/camera1/image_raw and use callback function to recieve data
-    self.image_sub2 = rospy.Subscriber("/camera2/robot/image_raw",Image,self.callback2)
-    # initialize the bridge between openCV and ROS
+    rospy.init_node('image_processing_camera_2', anonymous=True)
+
     self.bridge = CvBridge()
     self.rate = rospy.Rate(30)
 
+    self.image_sub2 = rospy.Subscriber("/camera2/robot/image_raw",Image,self.callback)
+
     # Publisher for centre coords - [BlueX, BlueZ, GreenX, GreenZ, RedX, RedZ]
     self.xz_plane_pub = rospy.Publisher("xz_centre_coords", Float64MultiArray, queue_size=1)
-
-    self.obst_pub = rospy.Publisher("/camera2/obst_pub", Float64, queue_size=1)
-
+    # Publisher for sphere coords [SphereX, SphereZ]
     self.target_sphere_xz_pub = rospy.Publisher("target_sphere_xz_centre_coords", Float64MultiArray, queue_size=1)
 
     self.last_blue_x = 0
@@ -38,19 +31,19 @@ class image_converter:
     self.last_red_x = 0
     self.last_red_z = 0 
 
-  # Recieve data, process it, and publish
-  def callback2(self,data):
-    # Recieve the image
+  # Recieve data from camera 2, process it, and publish
+  def callback(self,data):
     try:
       self.cv_image1 = self.bridge.imgmsg_to_cv2(data, "bgr8")
     except CvBridgeError as e:
       print(e)
 
     # Find centres of each joint
-    red_x, red_z = self.detect_colour(self.cv_image1, (0,0,100), (0,0,255)) # Detect red
-    blue_x, blue_z = self.detect_colour(self.cv_image1, (100,0,0), (255,0,0)) # Detect blue
-    green_x, green_z = self.detect_colour(self.cv_image1, (0,100,0), (0,255,0)) # Detect green
+    red_x, red_z = self.detect_colour(self.cv_image1, (0,0,100), (0,0,255))
+    blue_x, blue_z = self.detect_colour(self.cv_image1, (100,0,0), (255,0,0))
+    green_x, green_z = self.detect_colour(self.cv_image1, (0,100,0), (0,255,0))
     
+    # crop image to search target in so we can use a wider range of RGB values when masking for orange blobs
     cropped_target_detection_image = self.cv_image1[0:470, :]
     target_sphere_x, target_sphere_z = self.detect_target_sphere(cropped_target_detection_image, (0,45,100), (15,150,255))
     
@@ -67,7 +60,6 @@ class image_converter:
       centre_msg.data[1] = blue_z
     else:
       obst_msg.data = 200
-      self.obst_pub.publish(obst_msg)
       centre_msg.data[0] = self.last_blue_x
       centre_msg.data[1] = self.last_blue_z
 
@@ -78,7 +70,6 @@ class image_converter:
       centre_msg.data[3] = green_z
     else:
       obst_msg.data = 300
-      self.obst_pub.publish(obst_msg)
       centre_msg.data[2] = self.last_green_x
       centre_msg.data[3] = self.last_green_z
 
@@ -89,7 +80,6 @@ class image_converter:
       centre_msg.data[5] = red_z
     else:
       obst_msg.data = 400
-      self.obst_pub.publish(obst_msg)
       centre_msg.data[4] = self.last_red_x
       centre_msg.data[5] = self.last_red_z
 
@@ -111,17 +101,9 @@ class image_converter:
 
     contours, _ = cv2.findContours(mask, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)
 
-    max_sides = 0
-    target_contour = None
-
-    for contour in contours:
-      approx_sides = cv2.approxPolyDP(contour, 0.001*cv2.arcLength(contour, True), True)
-
-      if len(approx_sides) > max_sides:
-        max_sides = len(approx_sides)
-        target_contour = contour
-    
+    target_contour = max(contours, key=lambda contour: len(cv2.approxPolyDP(contour, 0.001*cv2.arcLength(contour, True), True)), default=None)
     M = cv2.moments(target_contour)
+
     try:
       cx = int(M['m10'] / M['m00'])
       cy = int(M['m01'] / M['m00'])
@@ -129,12 +111,6 @@ class image_converter:
       return (None, None)
 
     return (cx, cy)
-
-  def pixel2meters(self, image): # 2.5m
-    yellow_coords = self.detect_colour(image, (0,100,100), (0,255,255))
-    blue_coords = self.detect_colour(image, (100,0,0), (255,0,0))    
-    pixel_distance = np.linalg.norm(np.array(blue_coords) - np.array(yellow_coords))
-    return 2.5 / pixel_distance
 
   def detect_colour(self, image, lower, upper):
     mask = cv2.inRange(image, lower, upper)
