@@ -29,6 +29,8 @@ class image_converter:
 
     self.obst_pub = rospy.Publisher("/camera2/obst_pub", Float64, queue_size=1)
 
+    self.target_sphere_xz_pub = rospy.Publisher("target_sphere_xz_centre_coords", Float64MultiArray, queue_size=1)
+
     self.last_blue_x = 0
     self.last_blue_z = 0
     self.last_green_x = 0
@@ -48,7 +50,10 @@ class image_converter:
     red_x, red_z = self.detect_colour(self.cv_image1, (0,0,100), (0,0,255)) # Detect red
     blue_x, blue_z = self.detect_colour(self.cv_image1, (100,0,0), (255,0,0)) # Detect blue
     green_x, green_z = self.detect_colour(self.cv_image1, (0,100,0), (0,255,0)) # Detect green
-
+    
+    cropped_target_detection_image = self.cv_image1[0:470, :]
+    target_sphere_x, target_sphere_z = self.detect_target_sphere(cropped_target_detection_image, (0,45,100), (15,150,255))
+    
     # Camera 1: get X and Z
     centre_msg = Float64MultiArray()
     centre_msg.data = np.zeros(6)
@@ -90,8 +95,46 @@ class image_converter:
 
     self.xz_plane_pub.publish(centre_msg)
 
+    if target_sphere_x is not None and target_sphere_z is not None:
+      target_sphere_msg = Float64MultiArray()
+      target_sphere_msg.data = [target_sphere_x, target_sphere_z]
+      self.target_sphere_xz_pub.publish(target_sphere_msg)
+
     im1=cv2.imshow('Camera 2 - XZ Plane', self.cv_image1)
     cv2.waitKey(1)
+
+  def detect_target_sphere(self, image, lower, upper):
+    mask = cv2.inRange(image, lower, upper)
+
+    kernel = np.ones((5,5), np.uint8)
+    mask = cv2.dilate(mask, kernel, iterations=3)
+
+    contours, _ = cv2.findContours(mask, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)
+
+    max_sides = 0
+    target_contour = None
+
+    for contour in contours:
+      approx_sides = cv2.approxPolyDP(contour, 0.001*cv2.arcLength(contour, True), True)
+
+      if len(approx_sides) > max_sides:
+        max_sides = len(approx_sides)
+        target_contour = contour
+    
+    M = cv2.moments(target_contour)
+    try:
+      cx = int(M['m10'] / M['m00'])
+      cy = int(M['m01'] / M['m00'])
+    except ZeroDivisionError:
+      return (None, None)
+
+    return (cx, cy)
+
+  def pixel2meters(self, image): # 2.5m
+    yellow_coords = self.detect_colour(image, (0,100,100), (0,255,255))
+    blue_coords = self.detect_colour(image, (100,0,0), (255,0,0))    
+    pixel_distance = np.linalg.norm(np.array(blue_coords) - np.array(yellow_coords))
+    return 2.5 / pixel_distance
 
   def detect_colour(self, image, lower, upper):
     mask = cv2.inRange(image, lower, upper)

@@ -12,6 +12,11 @@ from std_msgs.msg import Float64MultiArray, Float64
 from cv_bridge import CvBridge, CvBridgeError
 import math
 
+PIXEL_2_METER_SCALING_FACTOR = 0.046 * 0.8
+YELLOW_JOINT_X = 400
+YELLOW_JOINT_Y = 400
+YELLOW_JOINT_Z = 531 + 30
+
 class joint_angles:
 
     def __init__(self):
@@ -29,9 +34,17 @@ class joint_angles:
         self.synced_sub = message_filters.ApproximateTimeSynchronizer([self.yz_sub, self.xz_sub], 1, 1, allow_headerless=True)
         self.synced_sub.registerCallback(self.callback)
 
-        self.joint_angles_pub = rospy.Publisher("estimated_joint_angles", Float64MultiArray, queue_size=1)
+        # Centre target coords from camera 1
+        self.target_yz_sub = message_filters.Subscriber("/target_sphere_yz_centre_coords", Float64MultiArray, queue_size=1)
+        # Centre target coords from camera 2
+        self.target_xz_sub = message_filters.Subscriber("/target_sphere_xz_centre_coords", Float64MultiArray, queue_size=1)
+        self.synced_sub = message_filters.ApproximateTimeSynchronizer([self.target_yz_sub, self.target_xz_sub], 1, 1, allow_headerless=True)
+        self.synced_sub.registerCallback(self.target_callback)
 
-        self.rate = rospy.Rate(30)
+        self.joint_angles_pub = rospy.Publisher("estimated_joint_angles", Float64MultiArray, queue_size=1)
+        self.target_coordinates_pub = rospy.Publisher("target_sphere_coords", Float64MultiArray, queue_size=1)
+
+        self.rate = rospy.Rate(60)
         self.move()
 
     def callback(self, yz_coords, xz_coords):
@@ -40,6 +53,21 @@ class joint_angles:
         joint_angles_msg = Float64MultiArray()
         joint_angles_msg.data = self.calculate_angles(yz_coords.data, xz_coords.data)
         self.joint_angles_pub.publish(joint_angles_msg)
+
+    def target_callback(self, target_yz_coords, target_xz_coords):
+
+        target_sphere_msg = Float64MultiArray()
+        target_sphere_msg.data = self.combine_target_coords(target_yz_coords.data, target_xz_coords.data)
+        self.target_coordinates_pub.publish(target_sphere_msg)
+
+    def combine_target_coords(self, target_yz_coords, target_xz_coords):
+        target_x_centred = target_xz_coords[0] - YELLOW_JOINT_X
+        target_y_centred = target_yz_coords[0] - YELLOW_JOINT_Y
+        target_z_centred = YELLOW_JOINT_Z - min([target_yz_coords[1], target_xz_coords[1]])
+
+        target_coords = np.array([target_x_centred, target_y_centred, target_z_centred])
+
+        return target_coords * PIXEL_2_METER_SCALING_FACTOR
 
     def calculate_angles(self, yz_coords, xz_coords):
         blue_z = max([xz_coords[1], yz_coords[1]])
