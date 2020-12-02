@@ -51,15 +51,12 @@ class image_converter:
     centre_msg = Float64MultiArray()
     centre_msg.data = np.zeros(6)
 
-    obst_msg = Float64()
-
     if blue_x is not None and blue_z is not None:
       self.last_blue_x = blue_x
       self.last_blue_z = blue_z 
       centre_msg.data[0] = blue_x
       centre_msg.data[1] = blue_z
     else:
-      obst_msg.data = 200
       centre_msg.data[0] = self.last_blue_x
       centre_msg.data[1] = self.last_blue_z
 
@@ -69,7 +66,6 @@ class image_converter:
       centre_msg.data[2] = green_x
       centre_msg.data[3] = green_z
     else:
-      obst_msg.data = 300
       centre_msg.data[2] = self.last_green_x
       centre_msg.data[3] = self.last_green_z
 
@@ -79,7 +75,6 @@ class image_converter:
       centre_msg.data[4] = red_x
       centre_msg.data[5] = red_z
     else:
-      obst_msg.data = 400
       centre_msg.data[4] = self.last_red_x
       centre_msg.data[5] = self.last_red_z
 
