@@ -21,7 +21,14 @@ def create_HTM_matrix(theta, alpha, r, d):
                       [0,              0,                              0,                             1                ]
                     ])
 
+# Calculate forward kinematic equations for position of end effector
 fk_pos = sp.expand(calculate_FK())
 sp.pprint(fk_pos)
 
+# Evaluate forward kinematics with example joint angles
 sp.pprint(fk_pos.subs([(theta_1, 0), (theta_2, 1.57), (theta_3, 0.785), (theta_4, 0)]))
+
+# Calculate jacobian matrix for velocity of end effector
+variables = sp.Matrix([theta_1, theta_2, theta_3, theta_4])
+jacobian = fk_pos.jacobian(variables)
+sp.pprint(jacobian)
