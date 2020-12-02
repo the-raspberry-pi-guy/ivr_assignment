@@ -43,6 +43,7 @@ class joint_angles:
 
         self.joint_angles_pub = rospy.Publisher("estimated_joint_angles", Float64MultiArray, queue_size=1)
         self.target_coordinates_pub = rospy.Publisher("target_sphere_coords", Float64MultiArray, queue_size=1)
+        self.red_coordinates_pub = rospy.Publisher("red_sphere_coords", Float64MultiArray, queue_size=1)
 
         self.rate = rospy.Rate(60)
         self.move()
@@ -53,6 +54,10 @@ class joint_angles:
         joint_angles_msg = Float64MultiArray()
         joint_angles_msg.data = self.calculate_angles(yz_coords.data, xz_coords.data)
         self.joint_angles_pub.publish(joint_angles_msg)
+
+        red_sphere_msg = Float64MultiArray()
+        red_sphere_msg.data = self.combine_target_coords(yz_coords.data[4:], xz_coords.data[4:])
+        self.red_coordinates_pub.publish(red_sphere_msg)
 
     def target_callback(self, target_yz_coords, target_xz_coords):
 
