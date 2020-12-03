@@ -27,6 +27,12 @@ class joint_angles:
         self.robot_joint4_pub = rospy.Publisher("/robot/joint4_position_controller/command", Float64, queue_size=10)
         self.vec_bg_pub = rospy.Publisher("/vec_bg", Float64MultiArray, queue_size=1)
 
+        self.joint_angles_pub = rospy.Publisher("estimated_joint_angles", Float64MultiArray, queue_size=1)
+        self.target_coordinates_pub = rospy.Publisher("target_sphere_coords", Float64MultiArray, queue_size=1)
+        self.cube_coordinates_pub = rospy.Publisher("target_cube_coords", Float64MultiArray, queue_size=1)
+        self.red_coordinates_pub = rospy.Publisher("red_sphere_coords", Float64MultiArray, queue_size=1)
+        self.green_coordinates_pub = rospy.Publisher("green_sphere_coords", Float64MultiArray, queue_size=1)
+
         # Centre coords from camera 1
         self.yz_sub = message_filters.Subscriber("/yz_centre_coords", Float64MultiArray, queue_size=1)
         # Centre coords from camera 2
@@ -41,9 +47,12 @@ class joint_angles:
         self.synced_sub = message_filters.ApproximateTimeSynchronizer([self.target_yz_sub, self.target_xz_sub], 1, 1, allow_headerless=True)
         self.synced_sub.registerCallback(self.target_callback)
 
-        self.joint_angles_pub = rospy.Publisher("estimated_joint_angles", Float64MultiArray, queue_size=1)
-        self.target_coordinates_pub = rospy.Publisher("target_sphere_coords", Float64MultiArray, queue_size=1)
-        self.red_coordinates_pub = rospy.Publisher("red_sphere_coords", Float64MultiArray, queue_size=1)
+        # Centre cube coords from camera 1
+        self.cube_yz_sub = message_filters.Subscriber("/target_cube_yz_centre_coords", Float64MultiArray, queue_size=1)
+        # Centre cube coords from camera 2
+        self.cube_xz_sub = message_filters.Subscriber("/target_cube_xz_centre_coords", Float64MultiArray, queue_size=1)
+        self.synced_sub = message_filters.ApproximateTimeSynchronizer([self.cube_yz_sub, self.cube_xz_sub], 1, 1, allow_headerless=True)
+        self.synced_sub.registerCallback(self.cube_callback)
 
         self.rate = rospy.Rate(60)
         #self.move()
@@ -59,11 +68,19 @@ class joint_angles:
         red_sphere_msg.data = self.combine_target_coords(yz_coords.data[4:], xz_coords.data[4:])
         self.red_coordinates_pub.publish(red_sphere_msg)
 
-    def target_callback(self, target_yz_coords, target_xz_coords):
+        green_sphere_msg = Float64MultiArray()
+        green_sphere_msg.data = self.combine_target_coords(yz_coords.data[2:4], xz_coords.data[2:4])
+        self.green_coordinates_pub.publish(green_sphere_msg)
 
+    def target_callback(self, target_yz_coords, target_xz_coords):
         target_sphere_msg = Float64MultiArray()
         target_sphere_msg.data = self.combine_target_coords(target_yz_coords.data, target_xz_coords.data)
         self.target_coordinates_pub.publish(target_sphere_msg)
+
+    def cube_callback(self, cube_yz_coords, cube_xz_coords):
+        target_cube_msg = Float64MultiArray()
+        target_cube_msg.data = self.combine_target_coords(cube_yz_coords.data, cube_xz_coords.data)
+        self.cube_coordinates_pub.publish(target_cube_msg)
 
     def combine_target_coords(self, target_yz_coords, target_xz_coords):
         target_x_centred = target_xz_coords[0] - YELLOW_JOINT_X

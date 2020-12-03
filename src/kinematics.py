@@ -20,6 +20,15 @@ class kinematics:
     def __init__(self):
         rospy.init_node('kinematics', anonymous=True)
 
+        self.q = np.array([0,0,0,0])
+        self.previous_time = rospy.get_time()
+        self.previous_error = np.array([0,0,0])
+        self.error_i = np.array([0,0,0])
+
+        self.previous_q = np.array([0,0,0,0])
+        self.previous_cube_position = np.array([0, 0, 0])
+        self.previous_green_position = np.array([0, 0, 0])
+
         self.estimated_joint_angles = rospy.Subscriber("estimated_joint_angles", Float64MultiArray, self.estimated_joint_angle_callback, queue_size=1)
         self.fk_estimated_pub = rospy.Publisher("fk_estimated_end_effector", Float64MultiArray, queue_size=1)
 
@@ -31,18 +40,16 @@ class kinematics:
         self.fk_actual_pub = rospy.Publisher("fk_actual_end_effector", Float64MultiArray, queue_size=1)
 
         self.target_sub = message_filters.Subscriber("/target_sphere_coords", Float64MultiArray, queue_size=1)
+        self.cube_sub = message_filters.Subscriber("/target_cube_coords", Float64MultiArray, queue_size=1)
         self.end_effector_sub = message_filters.Subscriber("/red_sphere_coords", Float64MultiArray, queue_size=1)
-        self.synced_control_sub = message_filters.ApproximateTimeSynchronizer([self.target_sub, self.end_effector_sub], 1, 1, allow_headerless=True)
+        self.green_sphere_sub = message_filters.Subscriber("/green_sphere_coords", Float64MultiArray, queue_size=1)
+        self.synced_control_sub = message_filters.ApproximateTimeSynchronizer([self.target_sub, self.cube_sub, self.end_effector_sub, self.green_sphere_sub], 1, 1, allow_headerless=True)
         self.synced_control_sub.registerCallback(self.control_callback)
+
         self.robot_joint1_pub = rospy.Publisher("/robot/joint1_position_controller/command", Float64, queue_size=10)
         self.robot_joint2_pub = rospy.Publisher("/robot/joint2_position_controller/command", Float64, queue_size=10)
         self.robot_joint3_pub = rospy.Publisher("/robot/joint3_position_controller/command", Float64, queue_size=10)
         self.robot_joint4_pub = rospy.Publisher("/robot/joint4_position_controller/command", Float64, queue_size=10)
-        
-        self.control_thetas = np.array([0,0,0,0])
-        self.previous_time = rospy.get_time()
-        self.previous_error = np.array([0,0,0])
-        self.error_i = np.array([0,0,0])
 
         self.rate = rospy.Rate(60)
     
@@ -53,9 +60,10 @@ class kinematics:
         fk_msg.data = self.calculate_FK(joint1_angle, joint2_angle, joint3_angle, joint4_angle)
         self.fk_estimated_pub.publish(fk_msg)
 
-    def control_callback(self, target_msg, end_effector_msg):
-        self.control_closed(np.array(target_msg.data), np.array(end_effector_msg.data))
-        joint1_angle, joint2_angle, joint3_angle, joint4_angle = self.control_thetas
+    def control_callback(self, target_sphere_msg, target_cube_msg, end_effector_msg, green_sphere_msg):
+        # self.control_closed(np.array(target_sphere_msg.data), np.array(end_effector_msg.data))
+        self.null_space_control(np.array(target_sphere_msg.data), np.array(target_cube_msg.data), np.array(end_effector_msg.data), np.array(green_sphere_msg.data))
+        joint1_angle, joint2_angle, joint3_angle, joint4_angle = self.q
 
         joint1 = Float64()
         joint1.data = joint1_angle
@@ -99,9 +107,9 @@ class kinematics:
                         ])
     
     def control_closed(self, target_xyz_pos, end_effector_xyz_pos):
-        K_p = np.eye(3) * 0.2 # 0.2
-        K_d = np.eye(3) * 0.15 # 0.2
-        K_i = np.eye(3) * 1e-5   # 1e-5
+        K_p = np.eye(3) * 0.9 
+        K_d = np.eye(3) * 0.2 
+        K_i = np.eye(3) * 1e-2  
 
         cur_time = rospy.get_time()
         dt = cur_time - self.previous_time
@@ -110,19 +118,87 @@ class kinematics:
         self.error = target_xyz_pos - end_effector_xyz_pos
         self.error_i = self.error_i + self.error * dt
         self.error_d = (self.error - self.previous_error) / dt
-        pid_output = K_p.dot(self.error.T) + K_d.dot(self.error_d.T) # + K_i.dot(self.error_i.T)
+        pid_output = K_p.dot(self.error.T) + K_d.dot(self.error_d.T) + K_i.dot(self.error_i.T)
 
-        J_inv = np.linalg.pinv(evaluate_jacobian(self.control_thetas[0], self.control_thetas[1], self.control_thetas[2], self.control_thetas[3]))
+        J_inv = np.linalg.pinv(evaluate_jacobian(self.q[0], self.q[1], self.q[2], self.q[3]))
         
-        print("Control thetas: " + str(self.control_thetas))
         q_desired_d = J_inv.dot(pid_output)
-        print("q_desired_d: " + str(q_desired_d))
-        q_desired = self.control_thetas + (q_desired_d * dt)
-        print("q_desired: " + str(q_desired))
-        print("---")
+        q_desired = self.q + (q_desired_d * dt)
 
-        self.control_thetas = q_desired
+        if q_desired[0] > 0:
+            q_desired[0] = min(q_desired[0], np.pi)
+        else:
+            q_desired[0] = max(q_desired[0], -np.pi)
+
+        for i in range(1, len(q_desired)):
+            if q_desired[i] > 0:
+                q_desired[i] = min(q_desired[i], np.pi /2)
+            else:
+                q_desired[i] = max(q_desired[i], -np.pi /2)
+
+
+        self.q = q_desired
         self.previous_error = self.error
+
+    def null_space_control(self, target_xyz_pos, cube_xyz_pos, end_effector_xyz_pos, green_joint_xyz_pos):
+        K_p = np.eye(3) * 0.9 
+        K_d = np.eye(3) * 0.2 
+        K_i = np.eye(3) * 1e-2
+
+        cur_time = rospy.get_time()
+        dt = cur_time - self.previous_time
+        self.previous_time = cur_time
+
+        self.error = target_xyz_pos - end_effector_xyz_pos
+        self.error_i = self.error_i + self.error * dt
+        self.error_d = (self.error - self.previous_error) / dt
+        pid_output = K_p.dot(self.error.T) + K_d.dot(self.error_d.T) + K_i.dot(self.error_i.T)
+
+        jacobian = evaluate_jacobian(self.q[0], self.q[1], self.q[2], self.q[3])
+        J_inv = np.linalg.pinv(jacobian)
+        
+        q_desired_d = J_inv.dot(pid_output)
+
+        nullspace_mat = np.eye(4) - np.matmul(J_inv, jacobian)
+        q_desired_d = q_desired_d + np.matmul(nullspace_mat, self.secondary_goal(cube_xyz_pos, green_joint_xyz_pos))
+        # q_desired_d = q_desired_d + np.matmul(nullspace_mat, self.secondary_goal(cube_xyz_pos, end_effector_xyz_pos))
+
+        q_desired = self.q + (q_desired_d * dt)
+
+        if q_desired[0] > 0:
+            q_desired[0] = min(q_desired[0], np.pi)
+        else:
+            q_desired[0] = max(q_desired[0], -np.pi)
+
+        for i in range(1, len(q_desired)):
+            if q_desired[i] > 0:
+                q_desired[i] = min(q_desired[i], np.pi /2)
+            else:
+                q_desired[i] = max(q_desired[i], -np.pi /2)
+
+        print(q_desired)
+
+        self.previous_q = self.q
+        self.previous_cube_position = np.array([cube_xyz_pos])
+        self.previous_green_position = np.array([green_joint_xyz_pos])
+        self.q = q_desired
+        self.previous_error = self.error
+
+    def secondary_goal(self, cube_xyz_pos, green_joint_xyz_pos):
+        cost = np.linalg.norm(cube_xyz_pos - green_joint_xyz_pos)
+        previous_cost = np.linalg.norm(self.previous_cube_position - self.previous_green_position)
+
+        dq = self.q - self.previous_q
+        offset = 0.1
+        dq = dq + offset
+        cost_d_wrt_angles = (np.ones(4) * (cost - previous_cost)) / dq
+
+        max_cost_d = 0.4
+        np.clip(cost_d_wrt_angles, -max_cost_d, max_cost_d)
+
+        print(cost_d_wrt_angles)
+
+        return 0.1 * cost_d_wrt_angles
 
 # call the class
 def main(args):

@@ -23,6 +23,8 @@ class image_converter:
     self.xz_plane_pub = rospy.Publisher("xz_centre_coords", Float64MultiArray, queue_size=1)
     # Publisher for sphere coords [SphereX, SphereZ]
     self.target_sphere_xz_pub = rospy.Publisher("target_sphere_xz_centre_coords", Float64MultiArray, queue_size=1)
+    # Publisher for sphere coords [CubeX, CubeZ]
+    self.target_cube_xz_pub = rospy.Publisher("target_cube_xz_centre_coords", Float64MultiArray, queue_size=1)
 
     self.last_blue_x = 0
     self.last_blue_z = 0
@@ -42,10 +44,6 @@ class image_converter:
     red_x, red_z = self.detect_colour(self.cv_image1, (0,0,100), (0,0,255))
     blue_x, blue_z = self.detect_colour(self.cv_image1, (100,0,0), (255,0,0))
     green_x, green_z = self.detect_colour(self.cv_image1, (0,100,0), (0,255,0))
-    
-    # crop image to search target in so we can use a wider range of RGB values when masking for orange blobs
-    cropped_target_detection_image = self.cv_image1[0:470, :]
-    target_sphere_x, target_sphere_z = self.detect_target_sphere(cropped_target_detection_image, (0,45,100), (15,150,255))
     
     # Camera 1: get X and Z
     centre_msg = Float64MultiArray()
@@ -80,10 +78,20 @@ class image_converter:
 
     self.xz_plane_pub.publish(centre_msg)
 
+    # crop image to search target in so we can use a wider range of RGB values when masking for orange blobs
+    cropped_target_detection_image = self.cv_image1[0:470, :]
+    target_sphere_x, target_sphere_z = self.detect_target_sphere(cropped_target_detection_image, (0,45,100), (15,150,255))
+    target_cube_x, target_cube_z = self.detect_target_cube(cropped_target_detection_image, (0,45,100), (15,150,255))
+
     if target_sphere_x is not None and target_sphere_z is not None:
       target_sphere_msg = Float64MultiArray()
       target_sphere_msg.data = [target_sphere_x, target_sphere_z]
       self.target_sphere_xz_pub.publish(target_sphere_msg)
+
+    if target_cube_x is not None and target_cube_z is not None:
+      target_cube_msg = Float64MultiArray()
+      target_cube_msg.data = [target_cube_x, target_cube_z]
+      self.target_cube_xz_pub.publish(target_cube_msg)
 
     im1=cv2.imshow('Camera 2 - XZ Plane', self.cv_image1)
     cv2.waitKey(1)
@@ -97,6 +105,25 @@ class image_converter:
     contours, _ = cv2.findContours(mask, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)
 
     target_contour = max(contours, key=lambda contour: len(cv2.approxPolyDP(contour, 0.001*cv2.arcLength(contour, True), True)), default=None)
+    M = cv2.moments(target_contour)
+
+    try:
+      cx = int(M['m10'] / M['m00'])
+      cy = int(M['m01'] / M['m00'])
+    except ZeroDivisionError:
+      return (None, None)
+
+    return (cx, cy)
+
+  def detect_target_cube(self, image, lower, upper):
+    mask = cv2.inRange(image, lower, upper)
+
+    kernel = np.ones((5,5), np.uint8)
+    mask = cv2.dilate(mask, kernel, iterations=3)
+
+    contours, _ = cv2.findContours(mask, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)
+
+    target_contour = min(contours, key=lambda contour: len(cv2.approxPolyDP(contour, 0.001*cv2.arcLength(contour, True), True)), default=None)
     M = cv2.moments(target_contour)
 
     try:
