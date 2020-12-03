@@ -46,7 +46,7 @@ class joint_angles:
         self.red_coordinates_pub = rospy.Publisher("red_sphere_coords", Float64MultiArray, queue_size=1)
 
         self.rate = rospy.Rate(60)
-        self.move()
+        #self.move()
 
     def callback(self, yz_coords, xz_coords):
         # Calculate joint angles
