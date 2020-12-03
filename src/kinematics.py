@@ -61,6 +61,7 @@ class kinematics:
         self.fk_estimated_pub.publish(fk_msg)
 
     def control_callback(self, target_sphere_msg, target_cube_msg, end_effector_msg, green_sphere_msg):
+        # Choose whether to use closed loop control or null space controller
         # self.control_closed(np.array(target_sphere_msg.data), np.array(end_effector_msg.data))
         self.null_space_control(np.array(target_sphere_msg.data), np.array(target_cube_msg.data), np.array(end_effector_msg.data), np.array(green_sphere_msg.data))
         joint1_angle, joint2_angle, joint3_angle, joint4_angle = self.q
