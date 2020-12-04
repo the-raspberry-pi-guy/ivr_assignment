@@ -93,8 +93,8 @@ class image_converter:
       target_cube_msg.data = [target_cube_y, target_cube_z]
       self.target_cube_yz_pub.publish(target_cube_msg)
 
-    im1=cv2.imshow('Camera 1 - YZ Plane', self.cv_image1)
-    cv2.waitKey(1)
+    #im1=cv2.imshow('Camera 1 - YZ Plane', self.cv_image1)
+    #cv2.waitKey(1)
 
   def detect_target_sphere(self, image, lower, upper):
     mask = cv2.inRange(image, lower, upper)

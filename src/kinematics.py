@@ -32,10 +32,11 @@ class kinematics:
         self.estimated_joint_angles = rospy.Subscriber("estimated_joint_angles", Float64MultiArray, self.estimated_joint_angle_callback, queue_size=1)
         self.fk_estimated_pub = rospy.Publisher("fk_estimated_end_effector", Float64MultiArray, queue_size=1)
 
+        self.joint1_sub = message_filters.Subscriber("/robot/joint1_position_controller/command", Float64, queue_size=1)
         self.joint2_sub = message_filters.Subscriber("/robot/joint2_position_controller/command", Float64, queue_size=1)
         self.joint3_sub = message_filters.Subscriber("/robot/joint3_position_controller/command", Float64, queue_size=1)
         self.joint4_sub = message_filters.Subscriber("/robot/joint4_position_controller/command", Float64, queue_size=1)
-        self.synced_sub = message_filters.ApproximateTimeSynchronizer([self.joint2_sub, self.joint3_sub, self.joint4_sub], 1, 1, allow_headerless=True)
+        self.synced_sub = message_filters.ApproximateTimeSynchronizer([self.joint1_sub, self.joint2_sub, self.joint3_sub, self.joint4_sub], 1, 1, allow_headerless=True)
         self.synced_sub.registerCallback(self.actual_joint_angle_callback)
         self.fk_actual_pub = rospy.Publisher("fk_actual_end_effector", Float64MultiArray, queue_size=1)
 
@@ -62,7 +63,7 @@ class kinematics:
 
     def control_callback(self, target_sphere_msg, target_cube_msg, end_effector_msg, green_sphere_msg):
         # Choose whether to use closed loop control or null space controller
-        # self.control_closed(np.array(target_sphere_msg.data), np.array(end_effector_msg.data))
+        #self.control_closed(np.array(target_sphere_msg.data), np.array(end_effector_msg.data))
         self.null_space_control(np.array(target_sphere_msg.data), np.array(target_cube_msg.data), np.array(end_effector_msg.data), np.array(green_sphere_msg.data))
         joint1_angle, joint2_angle, joint3_angle, joint4_angle = self.q
 
@@ -80,8 +81,8 @@ class kinematics:
         self.robot_joint3_pub.publish(joint3)
         self.robot_joint4_pub.publish(joint4)
 
-    def actual_joint_angle_callback(self, joint2_msg, joint3_msg, joint4_msg):
-        joint1_angle = 0
+    def actual_joint_angle_callback(self, joint1_msg, joint2_msg, joint3_msg, joint4_msg):
+        joint1_angle = joint1_msg.data
         joint2_angle = joint2_msg.data
         joint3_angle = joint3_msg.data
         joint4_angle = joint4_msg.data
@@ -108,9 +109,9 @@ class kinematics:
                         ])
     
     def control_closed(self, target_xyz_pos, end_effector_xyz_pos):
-        K_p = np.eye(3) * 0.9 
+        K_p = np.eye(3) * 0.5
         K_d = np.eye(3) * 0.2 
-        K_i = np.eye(3) * 1e-2  
+        K_i = np.eye(3) * 1e-5 #1e-2  
 
         cur_time = rospy.get_time()
         dt = cur_time - self.previous_time
@@ -142,9 +143,9 @@ class kinematics:
         self.previous_error = self.error
 
     def null_space_control(self, target_xyz_pos, cube_xyz_pos, end_effector_xyz_pos, green_joint_xyz_pos):
-        K_p = np.eye(3) * 0.9 
-        K_d = np.eye(3) * 0.2 
-        K_i = np.eye(3) * 1e-2
+        K_p = np.eye(3) * 0.5
+        K_d = np.eye(3) * 0.2
+        K_i = np.eye(3) * 1e-5 #1e-2
 
         cur_time = rospy.get_time()
         dt = cur_time - self.previous_time

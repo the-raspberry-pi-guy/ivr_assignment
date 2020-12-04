@@ -22,6 +22,7 @@ class joint_angles:
     def __init__(self):
         rospy.init_node('image_processing', anonymous=True)
 
+        self.robot_joint1_pub = rospy.Publisher("/robot/joint1_position_controller/command", Float64, queue_size=10)
         self.robot_joint2_pub = rospy.Publisher("/robot/joint2_position_controller/command", Float64, queue_size=10)
         self.robot_joint3_pub = rospy.Publisher("/robot/joint3_position_controller/command", Float64, queue_size=10)
         self.robot_joint4_pub = rospy.Publisher("/robot/joint4_position_controller/command", Float64, queue_size=10)
@@ -55,7 +56,9 @@ class joint_angles:
         self.synced_sub.registerCallback(self.cube_callback)
 
         self.rate = rospy.Rate(60)
-        #self.move()
+
+        # Comment to stop robot movement in earlier questions
+        # self.move()
 
     def callback(self, yz_coords, xz_coords):
         # Calculate joint angles
@@ -153,6 +156,8 @@ class joint_angles:
             angle3 = np.pi/2 * np.sin(cur_time * np.pi/18)
             angle4 = np.pi/2 * np.sin(cur_time * np.pi/20)
 
+            joint1 = Float64()
+            joint1.data = angle1
             joint2 = Float64()
             joint2.data = angle2
             joint3 = Float64()
@@ -160,6 +165,7 @@ class joint_angles:
             joint4 = Float64()
             joint4.data = angle4
 
+            self.robot_joint1_pub.publish(joint1)
             self.robot_joint2_pub.publish(joint2)
             self.robot_joint3_pub.publish(joint3)
             self.robot_joint4_pub.publish(joint4)
