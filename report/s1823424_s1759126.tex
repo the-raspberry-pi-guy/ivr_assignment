@@ -26,13 +26,13 @@ Access the GitHub link to our code here: \url{https://github.com/the-raspberry-p
 
 \subsection{Joint State Estimation}
 
-The algorithm for joint state estimation is implemented over image1.py, image2.py and joint\_target\_estimation.py. Each of the image files subscribe to the orthogonal camera raw data streams that are pointed at the robot in Gazebo, and thus view the x/z and y/z planes respectively. 
+The algorithm for joint state estimation is implemented over image1.py, image2.py and joint\_target\_estimation.py. Each of the image files subscribe to the orthogonal camera raw data streams that are pointed at the robot in Gazebo, and thus give a view of the x/z and y/z planes respectively. 
 
 When an image is received from the camera, the data from the image is passed to the callback - colour-based computer vision is then applied to detect each of the (different colour) joints of the robot. To achieve this, we used OpenCV colour masking, image dilation and then calculated the appropriate moment for the x/z or y/z coordinate pair, which are then published.
 
 joint\_target\_estimation.py receives these coordinates and, as the cameras can be assumed to be orthogonal (according to Prof Khadem live class), the x/z and y/z coordinates for all joints can be combined to form an $[x,y,z]$ vector that represents the location of the joint in 3D space.
 
-From this, the vectors between each link of the robot are determined (ie: the blue-green link is the blue vector minus the green vector). The arctan2 operator between the blue-green vector's y and z coordinates is then used to calculate the angle for joint 2. After this, a rotation operation with a rotation matrix around the x axis is applied to rotate the blue-green vector into the newly oriented frame. Joint 3 is then calculated with arctan2 between the rotated blue-green vector's x and z coordinates. Finally, joint 4 is calculated by applying arctan2 to the green-red joint vector's y and z coordinates, and then subtracting the joint 2 angle previously calculated - as these are in the same direction (x).
+From this, the vectors between each link of the robot are determined (ie: the blue-green link is the blue vector minus the green vector). The arctan2 operator between the blue-green vector's y and z coordinates is then used to calculate the angle for joint 2. After this, a rotation operation with a rotation matrix around the x axis is applied to rotate the blue-green vector into the newly oriented x-axis frame. Joint 3 is then calculated with arctan2 between the rotated blue-green vector's x and z coordinates. Finally, joint 4 is calculated by applying arctan2 to the green-red joint vector's y and z coordinates, and then subtracting the joint 2 angle previously calculated - as these are in the same direction (x).
 
 \begin{center}
     \begin{tabular}{ll}
@@ -44,7 +44,13 @@ From this, the vectors between each link of the robot are determined (ie: the bl
 \end{center}
 
 \subsection{Target Detection}
-\textit{\\DESCRIBE ALGORITHM \& COMMENT ON SOURCES OF ERROR IN MEASUREMENTS}
+Similar to Q2.1, the algorithm for detection of the target sphere is distributed over the 3 files previously discussed. Crucially, there is further image processing in the image1.py and image2.py files in order to identify the sphere specifically (as it is the same colour as the cube).
+
+As before, when an image is received from a camera, the callback triggers a detection algorithm. This disregards the bottom half of the image (as the sphere and cube never appear here) and then creates a mask with the orange shapes cut out. The contours of these shapes are then found using OpenCV, and the number of sides of the shape are identified by approximating a polygon to each shape with the OpenCV implementation of the Douglas-Peucker algorithm. The shape with the most sides is the sphere, as the cube only ever has approximately 4 sides according to our CV testing. 
+
+The moment of this shape is then calculated as before, and this happens in each camera to provide x/z and y/z coordinates as described in Q2.1. These are combined as before to form a $[x,y,z]$ estimate of the pixel location of the target sphere. Finally, a pixels-to-metres operation is performed to convert the pixel location to a metre-location with respect to the robot base frame. A scaling factor is calculated by counting the number of pixels between the base and first joint of the robot, and then dividing this by the known length (2.5m) of this link. We later hard coded this scaling factor for quick conversion of values.
+
+There are a few sources of error in our measurements. Most notably, occasionally the target sphere is occluded by the robot from the perspective of one of the camera's viewpoints (ie when it orbits behind the robot). This 
 
 \begin{center}
     \includegraphics[width=0.4\textwidth]{images/2.2_target.png}
@@ -52,6 +58,9 @@ From this, the vectors between each link of the robot are determined (ie: the bl
 
 \section{Robot Control}
 \subsection{Forward Kinematics}
+
+Insert table of DH params?
+
 \begin{center}
     \[\left[\begin{matrix}3 s{\left(\theta_{1} \right)} s{\left(\theta_{2} \right)} c{\left(\theta_{3} \right)} c{\left(\theta_{4} \right)} + 3.5 s{\left(\theta_{1} \right)} s{\left(\theta_{2} \right)} c{\left(\theta_{3} \right)} + 3 s{\left(\theta_{1} \right)} s{\left(\theta_{4} \right)} c{\left(\theta_{2} \right)} + 3 s{\left(\theta_{3} \right)} c{\left(\theta_{1} \right)} c{\left(\theta_{4} \right)} + 3.5 s{\left(\theta_{3} \right)} c{\left(\theta_{1} \right)}\\3 s{\left(\theta_{1} \right)} s{\left(\theta_{3} \right)} c{\left(\theta_{4} \right)} + 3.5 s{\left(\theta_{1} \right)} s{\left(\theta_{3} \right)} - 3 s{\left(\theta_{2} \right)} c{\left(\theta_{1} \right)} c{\left(\theta_{3} \right)} c{\left(\theta_{4} \right)} - 3.5 s{\left(\theta_{2} \right)} c{\left(\theta_{1} \right)} c{\left(\theta_{3} \right)} - 3 s{\left(\theta_{4} \right)} c{\left(\theta_{1} \right)} c{\left(\theta_{2} \right)}\\- 3 s{\left(\theta_{2} \right)} s{\left(\theta_{4} \right)} + 3 c{\left(\theta_{2} \right)} c{\left(\theta_{3} \right)} c{\left(\theta_{4} \right)} + 3.5 c{\left(\theta_{2} \right)} c{\left(\theta_{3} \right)} + 2.5\end{matrix}\right]\]
 
