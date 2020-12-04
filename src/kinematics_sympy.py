@@ -25,14 +25,22 @@ def evaluate_jacobian(t_1, t_2, t_3, t_4):
     f = sp.lambdify([theta_1, theta_2, theta_3, theta_4], jacobian, "numpy")
     return f(t_1, t_2, t_3, t_4)
 
-# Calculate forward kinematic equations for position of end effector
-fk_pos = sp.expand(calculate_FK())
-#sp.pprint(fk_pos)
+# # Calculate forward kinematic equations for position of end effector
+# fk_pos = sp.expand(calculate_FK())
+# sp.pprint(fk_pos)
+# latex_fk = sp.latex(fk_pos).replace("\cos", "c").replace("\sin", "s")
+# print(latex_fk)
 
-# Evaluate forward kinematics with example joint angles
-#sp.pprint(fk_pos.subs([(theta_1, 0), (theta_2, 1.57), (theta_3, 0.785), (theta_4, 0)]))
+# # Evaluate forward kinematics with example joint angles
+# sp.pprint(fk_pos.subs([(theta_1, 0), (theta_2, 1.57), (theta_3, 0.785), (theta_4, 0)]))
 
-# Calculate jacobian matrix for velocity of end effector
-variables = sp.Matrix([theta_1, theta_2, theta_3, theta_4])
-jacobian = fk_pos.jacobian(variables)
-#sp.pprint(jacobian)
+# # Calculate jacobian matrix for velocity of end effector
+# variables = sp.Matrix([theta_1, theta_2, theta_3, theta_4])
+# jacobian = fk_pos.jacobian(variables)
+# col1 = sp.latex(jacobian[:,0]).replace("\cos", "c").replace("\sin", "s")
+# col2 = sp.latex(jacobian[:,1]).replace("\cos", "c").replace("\sin", "s")
+# col3 = sp.latex(jacobian[:,2]).replace("\cos", "c").replace("\sin", "s")
+# col4 = sp.latex(jacobian[:,3]).replace("\cos", "c").replace("\sin", "s")
+
+# print(col4)
+# print(jacobian)
