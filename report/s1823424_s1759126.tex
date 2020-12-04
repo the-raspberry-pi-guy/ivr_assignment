@@ -83,7 +83,7 @@ Access the GitHub link to our code here: \url{https://github.com/the-raspberry-p
     \textbf{$D =$}
     \[\left[\begin{matrix}- 3 s{\left(\theta_{1} \right)} s{\left(\theta_{2} \right)} s{\left(\theta_{4} \right)} c{\left(\theta_{3} \right)} + 3 s{\left(\theta_{1} \right)} c{\left(\theta_{2} \right)} c{\left(\theta_{4} \right)} - 3 s{\left(\theta_{3} \right)} s{\left(\theta_{4} \right)} c{\left(\theta_{1} \right)}\\- 3 s{\left(\theta_{1} \right)} s{\left(\theta_{3} \right)} s{\left(\theta_{4} \right)} + 3 s{\left(\theta_{2} \right)} s{\left(\theta_{4} \right)} c{\left(\theta_{1} \right)} c{\left(\theta_{3} \right)} - 3 c{\left(\theta_{1} \right)} c{\left(\theta_{2} \right)} c{\left(\theta_{4} \right)}\\- 3 s{\left(\theta_{2} \right)} c{\left(\theta_{4} \right)} - 3 s{\left(\theta_{4} \right)} c{\left(\theta_{2} \right)} c{\left(\theta_{3} \right)}\end{matrix}\right]\]
 \end{center}
-Where A, B, C and D are column vectors that form the Jacobian when arranged like (formatted to save space):
+Where $c(\theta_i)=\cos(\theta_i)$, $s(\theta_i)=\sin(\theta_i)$ and A, B, C, D are column vectors that form the Jacobian when arranged like (formatted to save space):
 \[\left[\begin{matrix} A & B & C & D \end{matrix}\right]\]
 
 \begin{center}
@@ -99,6 +99,15 @@ Where A, B, C and D are column vectors that form the Jacobian when arranged like
 \setcounter{subsection}{1}
 \subsection{Null-space Control}
 
-\textit{\\DISCUSS ALGORITHM AND HOW IT IS DIFFERENT FROM PREVIOUS CONTROLLER. THREE PLOTS COMPARING THE POSITION OF THE ROBOT END-EFFECTOR WITH THE POSITION OF THE SPHERE AND THE POSITION OF THE BOX.}
+\textit{\\DISCUSS ALGORITHM AND HOW IT IS DIFFERENT FROM PREVIOUS CONTROLLER.}
+
+\begin{center}
+    \begin{tabular}{ll}
+        \includegraphics[width=0.4\textwidth]{images/nullspace_x.png}
+        &
+        \includegraphics[width=0.4\textwidth]{images/nullspace_y.png} \\
+        \includegraphics[width=0.4\textwidth]{images/nullspace_z.png} & \includegraphics[height=0.18\textwidth]{images/nullspace_pic.png}
+    \end{tabular}
+\end{center}
 
 \end{document}
