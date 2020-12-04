@@ -55,7 +55,7 @@ The moment of this shape is then calculated as before, and this happens in each 
 There are a few sources of error in our measurements. Most notably, occasionally the target sphere is occluded by the robot from the perspective of one of the camera's viewpoints (ie when it orbits behind the robot). This can momentarily cause our algorithm to theoretically identify the cube as the sphere target. In practice we never observed this happening significantly. Similar to as discussed in Q2.1, the other main source of error comes from the perspective view of each camera and how it is not an orthographic view that would result in a perfectly determined $[x,y,z]$.
 
 \begin{center}
-    \includegraphics[width=0.4\textwidth]{images/2.2_target.png}
+    \includegraphics[width=0.7\textwidth]{images/2.2_target.png}
 \end{center}
 
 \section{Robot Control}
@@ -79,6 +79,7 @@ There are a few sources of error in our measurements. Most notably, occasionally
     Where $c(\theta_i)=\cos(\theta_i)$, $s(\theta_i)=\sin(\theta_i)$
     \vspace{4mm}
 
+    \vspace{4mm}
     End Effector Position for Varying Joint Angles
 
     \begin{tabular}{|c|c|c|}
@@ -116,8 +117,11 @@ In general, the $[x,y,z]$ positions estimated by the FK and through the computer
     \textbf{$D =$}
     \[\left[\begin{matrix}- 3 s{\left(\theta_{1} \right)} s{\left(\theta_{2} \right)} s{\left(\theta_{4} \right)} c{\left(\theta_{3} \right)} + 3 s{\left(\theta_{1} \right)} c{\left(\theta_{2} \right)} c{\left(\theta_{4} \right)} - 3 s{\left(\theta_{3} \right)} s{\left(\theta_{4} \right)} c{\left(\theta_{1} \right)}\\- 3 s{\left(\theta_{1} \right)} s{\left(\theta_{3} \right)} s{\left(\theta_{4} \right)} + 3 s{\left(\theta_{2} \right)} s{\left(\theta_{4} \right)} c{\left(\theta_{1} \right)} c{\left(\theta_{3} \right)} - 3 c{\left(\theta_{1} \right)} c{\left(\theta_{2} \right)} c{\left(\theta_{4} \right)}\\- 3 s{\left(\theta_{2} \right)} c{\left(\theta_{4} \right)} - 3 s{\left(\theta_{4} \right)} c{\left(\theta_{2} \right)} c{\left(\theta_{3} \right)}\end{matrix}\right]\]
 \end{center}
+
 Where $c(\theta_i)=\cos(\theta_i)$, $s(\theta_i)=\sin(\theta_i)$ and A, B, C, D are column vectors that form the Jacobian \(J\) when arranged like (formatted to save space):
 \[J = \left[\begin{matrix} A & B & C & D \end{matrix}\right]\]
+
+We used a PID controller with the following parameters: $K_p = 0.5, K_d = 0.2, K_i = 1 \times 10^{-5}$
 
 \begin{center}
     \begin{tabular}{ll}
