@@ -64,10 +64,12 @@ There are a few sources of error in our measurements. Most notably, occasionally
 Insert table of DH params?
 
 \begin{center}
-    \[\left[\begin{matrix}3 s{\left(\theta_{1} \right)} s{\left(\theta_{2} \right)} c{\left(\theta_{3} \right)} c{\left(\theta_{4} \right)} + 3.5 s{\left(\theta_{1} \right)} s{\left(\theta_{2} \right)} c{\left(\theta_{3} \right)} + 3 s{\left(\theta_{1} \right)} s{\left(\theta_{4} \right)} c{\left(\theta_{2} \right)} + 3 s{\left(\theta_{3} \right)} c{\left(\theta_{1} \right)} c{\left(\theta_{4} \right)} + 3.5 s{\left(\theta_{3} \right)} c{\left(\theta_{1} \right)}\\3 s{\left(\theta_{1} \right)} s{\left(\theta_{3} \right)} c{\left(\theta_{4} \right)} + 3.5 s{\left(\theta_{1} \right)} s{\left(\theta_{3} \right)} - 3 s{\left(\theta_{2} \right)} c{\left(\theta_{1} \right)} c{\left(\theta_{3} \right)} c{\left(\theta_{4} \right)} - 3.5 s{\left(\theta_{2} \right)} c{\left(\theta_{1} \right)} c{\left(\theta_{3} \right)} - 3 s{\left(\theta_{4} \right)} c{\left(\theta_{1} \right)} c{\left(\theta_{2} \right)}\\- 3 s{\left(\theta_{2} \right)} s{\left(\theta_{4} \right)} + 3 c{\left(\theta_{2} \right)} c{\left(\theta_{3} \right)} c{\left(\theta_{4} \right)} + 3.5 c{\left(\theta_{2} \right)} c{\left(\theta_{3} \right)} + 2.5\end{matrix}\right]\]
+    \[K(q)=\left[\begin{matrix}3 s{\left(\theta_{1} \right)} s{\left(\theta_{2} \right)} c{\left(\theta_{3} \right)} c{\left(\theta_{4} \right)} + 3.5 s{\left(\theta_{1} \right)} s{\left(\theta_{2} \right)} c{\left(\theta_{3} \right)} + 3 s{\left(\theta_{1} \right)} s{\left(\theta_{4} \right)} c{\left(\theta_{2} \right)} + 3 s{\left(\theta_{3} \right)} c{\left(\theta_{1} \right)} c{\left(\theta_{4} \right)} + 3.5 s{\left(\theta_{3} \right)} c{\left(\theta_{1} \right)}\\3 s{\left(\theta_{1} \right)} s{\left(\theta_{3} \right)} c{\left(\theta_{4} \right)} + 3.5 s{\left(\theta_{1} \right)} s{\left(\theta_{3} \right)} - 3 s{\left(\theta_{2} \right)} c{\left(\theta_{1} \right)} c{\left(\theta_{3} \right)} c{\left(\theta_{4} \right)} - 3.5 s{\left(\theta_{2} \right)} c{\left(\theta_{1} \right)} c{\left(\theta_{3} \right)} - 3 s{\left(\theta_{4} \right)} c{\left(\theta_{1} \right)} c{\left(\theta_{2} \right)}\\- 3 s{\left(\theta_{2} \right)} s{\left(\theta_{4} \right)} + 3 c{\left(\theta_{2} \right)} c{\left(\theta_{3} \right)} c{\left(\theta_{4} \right)} + 3.5 c{\left(\theta_{2} \right)} c{\left(\theta_{3} \right)} + 2.5\end{matrix}\right]\]
 
     Where $c(\theta_i)=\cos(\theta_i)$, $s(\theta_i)=\sin(\theta_i)$
     \vspace{4mm}
+
+    End Effector Position for Varying Joint Angles
 
     \begin{tabular}{|c|c|c|}
         \hline
@@ -87,8 +89,7 @@ Insert table of DH params?
     \end{tabular}
 \end{center}
 
-
-\textit{COMMENT ON ACCURACY}
+In general, the $[x,y,z]$ positions estimated by the FK and through the computer vision roughly agree with each other (have the same signs and are of similar magnitude). However, there is a discrepancy between these values, especially at robot joint configurations where the end effector is positioned far away from the z axis. The main reason for this discrepancy is again due to the pinhole perspective view given by the cameras and the corresponding errors this introduces to the estimated $[x,y,z]$ values for the computer vision. Consequently, it is our belief that the the FK values presented in this table are of higher accuracy. This could be verified with orthographic camera views instead of the current camera setup - this would provide a more accurate computer vision estimate. Another thing to note is that the FK values are theoretically perfect, whereas the computer vision is only a practical estimate of reality, where different components can introduce real world errors (such as colour masking problems, lighting issues, etc.).
 
 \subsection{Closed-Loop Control}
 
