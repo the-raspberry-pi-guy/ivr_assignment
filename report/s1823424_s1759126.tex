@@ -25,7 +25,15 @@ Access the GitHub link to our code here: \url{https://github.com/the-raspberry-p
 \section{Robot Vision}
 
 \subsection{Joint State Estimation}
-\textit{\\DESCRIBE ALGORITHM}
+
+The algorithm for joint state estimation is implemented over image1.py, image2.py and joint\_target\_estimation.py. Each of the image files subscribe to the orthogonal camera raw data streams that are pointed at the robot in Gazebo, and thus view the x/z and y/z planes respectively. 
+
+When an image is received from the camera, the data from the image is passed to the callback - colour-based computer vision is then applied to detect each of the (different colour) joints of the robot. To achieve this, we used OpenCV colour masking, image dilation and then calculated the appropriate moment for the x/z or y/z coordinate pair, which are then published.
+
+joint\_target\_estimation.py receives these coordinates and, as the cameras can be assumed to be orthogonal (according to Prof Khadem live class), the x/z and y/z coordinates for all joints can be combined to form an $[x,y,z]$ vector that represents the location of the joint in 3D space.
+
+From this, the vectors between each link of the robot are determined (ie: the blue-green link is the blue vector minus the green vector). The arctan2 operator between the blue-green vector's y and z coordinates is then used to calculate the angle for joint 2. After this, a rotation operation with a rotation matrix around the x axis is applied to rotate the blue-green vector into the newly oriented frame. Joint 3 is then calculated with arctan2 between the rotated blue-green vector's x and z coordinates. Finally, joint 4 is calculated by applying arctan2 to the green-red joint vector's y and z coordinates, and then subtracting the joint 2 angle previously calculated - as these are in the same direction (x).
+
 \begin{center}
     \begin{tabular}{ll}
         \includegraphics[width=0.4\textwidth]{images/2.1_joint2.png}
@@ -47,7 +55,7 @@ Access the GitHub link to our code here: \url{https://github.com/the-raspberry-p
 \begin{center}
     \[\left[\begin{matrix}3 s{\left(\theta_{1} \right)} s{\left(\theta_{2} \right)} c{\left(\theta_{3} \right)} c{\left(\theta_{4} \right)} + 3.5 s{\left(\theta_{1} \right)} s{\left(\theta_{2} \right)} c{\left(\theta_{3} \right)} + 3 s{\left(\theta_{1} \right)} s{\left(\theta_{4} \right)} c{\left(\theta_{2} \right)} + 3 s{\left(\theta_{3} \right)} c{\left(\theta_{1} \right)} c{\left(\theta_{4} \right)} + 3.5 s{\left(\theta_{3} \right)} c{\left(\theta_{1} \right)}\\3 s{\left(\theta_{1} \right)} s{\left(\theta_{3} \right)} c{\left(\theta_{4} \right)} + 3.5 s{\left(\theta_{1} \right)} s{\left(\theta_{3} \right)} - 3 s{\left(\theta_{2} \right)} c{\left(\theta_{1} \right)} c{\left(\theta_{3} \right)} c{\left(\theta_{4} \right)} - 3.5 s{\left(\theta_{2} \right)} c{\left(\theta_{1} \right)} c{\left(\theta_{3} \right)} - 3 s{\left(\theta_{4} \right)} c{\left(\theta_{1} \right)} c{\left(\theta_{2} \right)}\\- 3 s{\left(\theta_{2} \right)} s{\left(\theta_{4} \right)} + 3 c{\left(\theta_{2} \right)} c{\left(\theta_{3} \right)} c{\left(\theta_{4} \right)} + 3.5 c{\left(\theta_{2} \right)} c{\left(\theta_{3} \right)} + 2.5\end{matrix}\right]\]
 
-    where $c(\theta_i)=\cos(\theta_i)$, $s(\theta_i)=\sin(\theta_i)$
+    Where $c(\theta_i)=\cos(\theta_i)$, $s(\theta_i)=\sin(\theta_i)$
     \vspace{4mm}
 
     \begin{tabular}{|c|c|c|}
