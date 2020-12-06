@@ -3,6 +3,8 @@
 
 Code, resources and report for the Introduction to Vision and Robotics coursework at the University of Edinburgh, conducted in Year 3, Semester 1 of studies.
 
+Final Grade: A (96%)
+
 ### Instructions to run Q4.2 - Null-space Control
 * Clone this repository into your caktin workspace, make and source accordingly. Ubuntu 20, ROS Noetic.
 * Run Gazebo simulation: ```roslaunch ivr_assignment spawn.launch```
